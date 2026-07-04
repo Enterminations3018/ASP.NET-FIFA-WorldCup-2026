@@ -1,0 +1,144 @@
+@page "/stadiums"
+@using WorldCup2026.Models
+@using WorldCup2026.Services
+@inject IWorldCupService WorldCupService
+
+<PageTitle>球场巡礼 - 2026 FIFA 世界杯</PageTitle>
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-3">🏟️ 16 座球场巡礼</h2>
+    <p class="text-muted">2026 年美加墨世界杯三大主办国的所有比赛场馆</p>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light py-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span class="fw-semibold">📊 排序方式</span>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/stadiums?sort=capacity_desc" class="btn btn-sm @(sortBy == "capacity_desc" ? "btn-primary" : "btn-outline-primary")">🏟️ 容量（大→小）</a>
+                <a href="/stadiums?sort=capacity_asc" class="btn btn-sm @(sortBy == "capacity_asc" ? "btn-primary" : "btn-outline-primary")">🏟️ 容量（小→大）</a>
+                <a href="/stadiums?sort=country" class="btn btn-sm @(sortBy == "country" ? "btn-primary" : "btn-outline-primary")">🌍 国家</a>
+                <a href="/stadiums?sort=city" class="btn btn-sm @(sortBy == "city" ? "btn-primary" : "btn-outline-primary")">🏙️ 城市</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:0.95rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:60px" class="text-center">#</th>
+                        <th>球场名称</th>
+                        <th style="width:160px" class="text-center">国家</th>
+                        <th style="width:150px" class="text-center">城市</th>
+                        <th style="width:130px" class="text-center">🏟️ 容纳人数</th>
+                        <th style="width:100px" class="text-center">比赛数</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in sortedStadiums)
+                    {
+                        var index = sortedStadiums.IndexOf(s) + 1;
+                        var isLargest = s.Capacity >= 80000;
+                        <tr class="@(isLargest ? "bg-primary bg-opacity-5 fw-semibold" : "")">
+                            <td class="text-center text-muted">@index</td>
+                            <td class="fw-semibold fs-6">🏟️ @s.Name</td>
+                            <td class="text-center">
+                                <span style="font-size:1.3rem;">@s.CountryFlag</span>
+                                <span class="ms-1">@s.Country</span>
+                            </td>
+                            <td class="text-center text-muted">🏙️ @s.City</td>
+                            <td class="text-center fs-6 @(isLargest ? "text-danger fw-bold" : "text-primary fw-semibold")">
+                                @s.Capacity.ToString("#,##0") 人
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-dark text-white">@s.MatchesHosted 场</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-5">
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="fs-1 fw-bold text-primary">11</div>
+                <div class="text-muted mb-2">🇺🇸 美国球场</div>
+                <div class="text-secondary small">纽约、洛杉矶、迈阿密、达拉斯、堪萨斯城、休斯顿、西雅图、华盛顿、亚特兰大、波士顿、旧金山、费城、奥兰多...</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="fs-1 fw-bold text-success">2</div>
+                <div class="text-muted mb-2">🇨🇦 加拿大球场</div>
+                <div class="text-secondary small">多伦多（BMO 球场）+ 温哥华（BC Place）</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="fs-1 fw-bold text-warning">1</div>
+                <div class="text-muted mb-2">🇲🇽 墨西哥球场</div>
+                <div class="text-secondary small">墨西哥城阿兹特克体育场（87,523 人，本届容量最大）</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-5">
+    @foreach (var s in sortedStadiums.OrderByDescending(x => x.Capacity).Take(6))
+    {
+        <div class="col-12 col-md-6 col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-start justify-content-between mb-2">
+                        <h6 class="card-title fw-bold mb-0">🏟️ @s.Name</h6>
+                        <span style="font-size:1.4rem;">@s.CountryFlag</span>
+                    </div>
+                    <div class="text-muted small mb-3">
+                        🌍 @s.Country · 🏙️ @s.City
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center py-2 px-3 rounded-3 bg-light">
+                        <span class="small text-secondary">容纳人数</span>
+                        <span class="fw-bold text-primary fs-5">@s.Capacity.ToString("#,##0")</span>
+                    </div>
+                    <div class="mt-2 small text-muted">
+                        本届承办小组赛数量：<span class="fw-semibold">@s.MatchesHosted 场</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "sort")]
+    public string? SortQuery { get; set; }
+
+    private string sortBy = "capacity_desc";
+    private List<Stadium> sortedStadiums = new();
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(SortQuery))
+        {
+            sortBy = SortQuery;
+        }
+
+        var all = WorldCupService.GetStadiums();
+        sortedStadiums = sortBy switch
+        {
+            "capacity_asc" => all.OrderBy(s => s.Capacity).ToList(),
+            "country" => all.OrderBy(s => s.Country).ThenBy(s => s.City).ToList(),
+            "city" => all.OrderBy(s => s.City).ToList(),
+            _ => all.OrderByDescending(s => s.Capacity).ToList()
+        };
+    }
+}

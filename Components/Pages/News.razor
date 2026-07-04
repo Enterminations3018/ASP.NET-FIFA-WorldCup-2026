@@ -1,0 +1,80 @@
+@page "/news"
+@using WorldCup2026.Models
+@using WorldCup2026.Services
+@inject IWorldCupService WorldCupService
+
+<PageTitle>新闻资讯 - 2026 FIFA 世界杯</PageTitle>
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-3">📰 新闻资讯</h2>
+    <p class="text-muted">最新世界杯动态和热点报道</p>
+</div>
+
+@{
+    var allNews = WorldCupService.GetNews();
+    var featured = allNews.FirstOrDefault();
+    var rest = allNews.Skip(1).ToList();
+}
+
+@if (featured != null)
+{
+    <div class="card border-0 shadow-lg mb-5 overflow-hidden rounded-4">
+        <div class="row g-0">
+            @if (!string.IsNullOrWhiteSpace(featured.ImageUrl))
+            {
+                <div class="col-lg-6">
+                    <img src="@featured.ImageUrl" class="img-fluid w-100 h-100" alt="@featured.Title" style="object-fit: cover; min-height: 400px;">
+                </div>
+            }
+            <div class="@(string.IsNullOrWhiteSpace(featured.ImageUrl) ? "col-lg-12" : "col-lg-6") d-flex flex-column">
+                <div class="card-body p-5 flex-grow-1 d-flex flex-column justify-content-center">
+                    <span class="badge bg-danger mb-3 align-self-start fs-6 px-3 py-1">🔥 头条新闻</span>
+                    <h3 class="fw-bold mb-3 lh-base">@featured.Title</h3>
+                    <p class="lead text-muted mb-4">@featured.Summary</p>
+                    <p class="mb-4 lh-lg">@featured.Content</p>
+                    <div class="d-flex gap-3 flex-wrap align-items-center mt-auto">
+                        <span class="badge bg-primary px-3 py-1">@featured.Source</span>
+                        <span class="text-muted">📅 @featured.PublishDate.ToString("yyyy年MM月dd日")</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row g-4">
+    @foreach (var news in rest)
+    {
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="row g-0 h-100">
+                    @if (!string.IsNullOrWhiteSpace(news.ImageUrl))
+                    {
+                        <div class="col-md-5">
+                            <img src="@news.ImageUrl" class="img-fluid w-100 h-100" alt="@news.Title" style="object-fit: cover; min-height: 200px;">
+                        </div>
+                    }
+                    <div class="@(string.IsNullOrWhiteSpace(news.ImageUrl) ? "col-md-12" : "col-md-7")">
+                        <div class="card-body d-flex flex-column h-100">
+                            <div class="mb-2">
+                                <span class="badge bg-primary me-2">@news.Source</span>
+                                <small class="text-muted">📅 @news.PublishDate.ToString("yyyy年MM月dd日")</small>
+                            </div>
+                            <h5 class="card-title fw-bold mb-3 lh-base">@news.Title</h5>
+                            <p class="card-text text-muted flex-grow-1">@news.Summary</p>
+                            <p class="card-text small text-muted mb-0 lh-lg">@news.Content</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@if (!allNews.Any())
+{
+    <div class="text-center py-5">
+        <div class="display-1 mb-3">📰</div>
+        <h4 class="text-muted">暂无新闻</h4>
+    </div>
+}

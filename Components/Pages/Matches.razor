@@ -1,0 +1,150 @@
+@page "/matches"
+@using WorldCup2026.Models
+@using WorldCup2026.Services
+@inject IWorldCupService WorldCupService
+@inject NavigationManager NavigationManager
+
+<PageTitle>赛程赛果 - 2026 FIFA 世界杯</PageTitle>
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-3">📅 赛程赛果</h2>
+    <p class="text-muted">查看全部比赛日程和实时比分</p>
+</div>
+
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    <a href="/matches?filter=all"
+       class="btn @(currentFilter == "all" ? "btn-primary" : "btn-outline-primary")">全部比赛</a>
+    <a href="/matches?filter=finished"
+       class="btn @(currentFilter == "finished" ? "btn-success" : "btn-outline-success")">✅ 已结束</a>
+    <a href="/matches?filter=upcoming"
+       class="btn @(currentFilter == "upcoming" ? "btn-warning" : "btn-outline-warning")">⏰ 未开始</a>
+    <a href="/matches?filter=live"
+       class="btn @(currentFilter == "live" ? "btn-danger" : "btn-outline-danger")">🔴 进行中</a>
+</div>
+
+@{
+    var filteredMatches = GetFilteredMatches();
+    var groupedMatches = filteredMatches.GroupBy(m => m.MatchDate.Date).OrderBy(g => g.Key);
+}
+
+@if (!filteredMatches.Any())
+{
+    <div class="text-center py-5">
+        <div class="display-1 mb-3">⚽</div>
+        <h4 class="text-muted">暂无符合条件的比赛</h4>
+    </div>
+}
+else
+{
+    @foreach (var dateGroup in groupedMatches)
+    {
+        <div class="mb-4">
+            <h5 class="fw-bold mb-3 border-start border-4 border-primary ps-3">
+                📆 @dateGroup.Key.ToString("yyyy年MM月dd日 dddd")
+                <span class="badge bg-secondary ms-2">@dateGroup.Count() 场</span>
+            </h5>
+            <div class="row g-3">
+                @foreach (var match in dateGroup)
+                {
+                    <div class="col-lg-6">
+                        <div class="card border-0 shadow-sm h-100 @(match.IsFinished ? "" : "border-start border-4 border-warning")">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <span class="badge @(match.IsFinished ? "bg-secondary" : (match.Status == "进行中" ? "bg-danger" : "bg-warning text-dark"))">
+                                        @match.Status
+                                    </span>
+                                    <small class="text-muted">
+                                        ⏰ @match.MatchDate.ToString("HH:mm")
+                                    </small>
+                                </div>
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="d-flex align-items-center gap-3 flex-grow-1">
+                                        <span style="font-size: 2rem;">@match.HomeTeam.FlagUrl</span>
+                                        <div>
+                                            <div class="fw-semibold fs-5">@match.HomeTeam.Name</div>
+                                            <small class="text-muted">主队</small>
+                                        </div>
+                                    </div>
+                                    <div class="px-4 text-center">
+                                        @if (match.IsFinished)
+                                        {
+                                            <div class="fs-2 fw-bold">
+                                                @match.HomeScore
+                                                <span class="text-muted mx-1">-</span>
+                                                @match.AwayScore
+                                            </div>
+                                        }
+                                        else if (match.Status == "进行中")
+                                        {
+                                            <div class="fs-2 fw-bold text-danger">
+                                                @match.HomeScore
+                                                <span class="text-muted mx-1">-</span>
+                                                @match.AwayScore
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="fs-4 text-muted fw-semibold">VS</div>
+                                        }
+                                    </div>
+                                    <div class="d-flex align-items-center gap-3 flex-grow-1 justify-content-end">
+                                        <div class="text-end">
+                                            <div class="fw-semibold fs-5">@match.AwayTeam.Name</div>
+                                            <small class="text-muted">客队</small>
+                                        </div>
+                                        <span style="font-size: 2rem;">@match.AwayTeam.FlagUrl</span>
+                                    </div>
+                                </div>
+                                <div class="pt-2 border-top">
+                                    <div class="row small">
+                                        <div class="col-md-6">
+                                            <span class="text-muted">🏟️ 球场：</span>@match.Venue
+                                        </div>
+                                        <div class="col-md-6 text-md-end">
+                                            <span class="text-muted">🏆 阶段：</span>@match.Stage
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "filter")]
+    public string? FilterQuery { get; set; }
+
+    private string currentFilter = "all";
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(FilterQuery))
+        {
+            currentFilter = FilterQuery;
+        }
+        else
+        {
+            currentFilter = "all";
+        }
+    }
+
+    private List<Match> GetFilteredMatches()
+    {
+        var all = WorldCupService.GetMatches();
+        switch (currentFilter)
+        {
+            case "finished":
+                return all.Where(m => m.IsFinished).ToList();
+            case "upcoming":
+                return all.Where(m => !m.IsFinished && m.Status == "未开始").ToList();
+            case "live":
+                return all.Where(m => m.Status == "进行中").ToList();
+            default:
+                return all;
+        }
+    }
+}

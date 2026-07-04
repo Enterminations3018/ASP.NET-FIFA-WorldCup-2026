@@ -1,0 +1,59 @@
+###############################################################################
+# Set default behavior to automatically normalize line endings.
+###############################################################################
+* text=auto
+
+###############################################################################
+# Source files
+###############################################################################
+*.cs      text diff=csharp
+*.cshtml  text diff=csharp
+*.razor   text diff=csharp
+*.css     text diff=css
+*.scss    text diff=css
+*.sass    text diff=css
+*.js      text eol=lf
+*.ts      text eol=lf
+*.json    text
+*.md      text
+*.xml     text
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.csproj  text
+*.sln     text eol=crlf
+*.slnx    text eol=crlf
+*.props   text
+*.targets text
+*.sh      text eol=lf
+*.ps1     text eol=crlf
+*.cmd     text eol=crlf
+*.bat     text eol=crlf
+
+###############################################################################
+# Binary files (don't diff / don't normalize)
+###############################################################################
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.bmp    binary
+*.ico    binary
+*.webp   binary
+*.svg    binary
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.eot    binary
+*.otf    binary
+*.dll    binary
+*.exe    binary
+*.pdb    binary
+*.so     binary
+*.dylib  binary
+*.nupkg  binary
+*.zip    binary
+*.7z     binary
+*.rar    binary
+*.gz     binary
+*.tar    binary
+*.map    binary

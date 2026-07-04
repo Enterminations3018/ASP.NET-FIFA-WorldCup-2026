@@ -1,0 +1,179 @@
+@page "/rankings"
+@using WorldCup2026.Models
+@using WorldCup2026.Services
+@inject IWorldCupService WorldCupService
+@inject NavigationManager NavigationManager
+
+<PageTitle>实力榜 - 2026 FIFA 世界杯</PageTitle>
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-3">🏆 夺冠实力榜 & 赔率</h2>
+    <p class="text-muted">基于 FIFA 排名、阵容深度、历史战绩综合评分（共 18 队，含模拟外卡）</p>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light py-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span class="fw-semibold">📊 排序方式</span>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/rankings?sort=total" class="btn btn-sm @(sortBy == "total" ? "btn-primary" : "btn-outline-primary")">综合分</a>
+                <a href="/rankings?sort=attack" class="btn btn-sm @(sortBy == "attack" ? "btn-primary" : "btn-outline-primary")">⚔️ 进攻</a>
+                <a href="/rankings?sort=midfield" class="btn btn-sm @(sortBy == "midfield" ? "btn-primary" : "btn-outline-primary")">🧠 中场</a>
+                <a href="/rankings?sort=defense" class="btn btn-sm @(sortBy == "defense" ? "btn-primary" : "btn-outline-primary")">🛡️ 防守</a>
+                <a href="/rankings?sort=gk" class="btn btn-sm @(sortBy == "gk" ? "btn-primary" : "btn-outline-primary")">🧤 门将</a>
+                <a href="/rankings?sort=fifa" class="btn btn-sm @(sortBy == "fifa" ? "btn-primary" : "btn-outline-primary")">🌍 FIFA 排名</a>
+                <a href="/rankings?sort=win" class="btn btn-sm @(sortBy == "win" ? "btn-primary" : "btn-outline-primary")">💰 夺冠概率</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:0.95rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:60px" class="text-center">#</th>
+                        <th>球队</th>
+                        <th style="width:80px" class="text-center">小组</th>
+                        <th style="width:80px" class="text-center">FIFA</th>
+                        <th style="width:90px" class="text-center">⚔️ 进攻</th>
+                        <th style="width:90px" class="text-center">🧠 中场</th>
+                        <th style="width:90px" class="text-center">🛡️ 防守</th>
+                        <th style="width:90px" class="text-center">🧤 门将</th>
+                        <th style="width:100px" class="text-center fw-bold">综合分</th>
+                        <th style="width:100px" class="text-center">💰 夺冠概率</th>
+                        <th>当家球星</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in sortedRankings)
+                    {
+                        var rowClass = r.Rank <= 4 ? "bg-success bg-opacity-5 fw-bold" :
+                                       r.Rank <= 8 ? "bg-info bg-opacity-5" : "";
+                        <tr class="@rowClass">
+                            <td class="text-center">
+                                @if (r.Rank == 1) { <span class="text-warning">🥇</span> }
+                                else if (r.Rank == 2) { <span class="text-secondary">🥈</span> }
+                                else if (r.Rank == 3) { <span class="text-danger">🥉</span> }
+                                else { <span class="text-muted">@r.Rank</span> }
+                            </td>
+                            <td>
+                                <span style="font-size:1.4rem;vertical-align:middle;margin-right:8px;">@r.FlagUrl</span>
+                                <span class="fw-semibold">@r.TeamName</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-dark text-white">@r.Group</span>
+                            </td>
+                            <td class="text-center">@r.FifaRanking</td>
+                            <td class="text-center @(r.AttackScore >= 90 ? "text-danger fw-bold" : "")">@r.AttackScore</td>
+                            <td class="text-center @(r.MidfieldScore >= 90 ? "text-primary fw-bold" : "")">@r.MidfieldScore</td>
+                            <td class="text-center @(r.DefenseScore >= 88 ? "text-success fw-bold" : "")">@r.DefenseScore</td>
+                            <td class="text-center @(r.GoalkeeperScore >= 88 ? "text-info fw-bold" : "")">@r.GoalkeeperScore</td>
+                            <td class="text-center fs-5 fw-bold text-primary">@r.TotalScore</td>
+                            <td class="text-center">
+                                <span class="badge bg-danger text-white fs-6">@r.WinProbability.ToString("0.0")%</span>
+                            </td>
+                            <td class="text-muted">
+                                ⭐ @r.StarPlayer
+                                <div><small class="text-secondary">历史最佳：@r.BestFinish</small></div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-5">
+    <div class="col-12 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-3">🎯 争冠第一梯队</h5>
+                <div class="d-flex flex-column gap-3">
+                    @foreach (var r in sortedRankings.Take(4))
+                    {
+                        <div class="p-3 rounded-3 bg-white border">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span style="font-size:1.6rem;margin-right:10px;">@r.FlagUrl</span>
+                                    <span class="fw-bold fs-5">@r.TeamName</span>
+                                </div>
+                                <span class="badge bg-warning text-dark fs-6">夺冠 @r.WinProbability.ToString("0.0")%</span>
+                            </div>
+                            <div class="mt-2 text-muted small">当家球星：@r.StarPlayer · FIFA 排名：@r.FifaRanking</div>
+                            <div class="mt-1">
+                                <div class="progress" style="height:8px;">
+                                    <div class="progress-bar bg-primary" style="width:@(r.TotalScore / 4.0)%"></div>
+                                </div>
+                                <div class="text-end small mt-1 fw-semibold">综合 @r.TotalScore / 400</div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h5 class="card-title fw-bold mb-3">🏅 黑马 & 潜力球队</h5>
+                <div class="d-flex flex-column gap-3">
+                    @foreach (var r in sortedRankings.Skip(8).Take(5))
+                    {
+                        <div class="p-3 rounded-3 bg-white border">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <span style="font-size:1.4rem;margin-right:10px;">@r.FlagUrl</span>
+                                    <span class="fw-semibold">@r.TeamName</span>
+                                </div>
+                                <span class="text-muted small">综合 @r.TotalScore</span>
+                            </div>
+                            <div class="mt-2 text-secondary small">
+                                FIFA @r.FifaRanking · 小组 @r.Group · 核心：@r.StarPlayer<br/>
+                                <small>历史最佳：@r.BestFinish</small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "sort")]
+    public string? SortQuery { get; set; }
+
+    private string sortBy = "total";
+
+    private List<PowerRanking> sortedRankings = new();
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(SortQuery))
+        {
+            sortBy = SortQuery;
+        }
+        else
+        {
+            sortBy = "total";
+        }
+
+        var all = WorldCupService.GetPowerRankings();
+        sortedRankings = sortBy switch
+        {
+            "attack" => all.OrderByDescending(r => r.AttackScore).ToList(),
+            "midfield" => all.OrderByDescending(r => r.MidfieldScore).ToList(),
+            "defense" => all.OrderByDescending(r => r.DefenseScore).ToList(),
+            "gk" => all.OrderByDescending(r => r.GoalkeeperScore).ToList(),
+            "fifa" => all.OrderBy(r => r.FifaRanking).ToList(),
+            "win" => all.OrderByDescending(r => r.WinProbability).ToList(),
+            _ => all.OrderByDescending(r => r.TotalScore).ToList()
+        };
+
+        for (int i = 0; i < sortedRankings.Count; i++)
+        {
+            sortedRankings[i].Rank = i + 1;
+        }
+    }
+}

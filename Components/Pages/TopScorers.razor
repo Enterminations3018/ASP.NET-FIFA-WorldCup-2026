@@ -1,0 +1,167 @@
+@page "/scorers"
+@using WorldCup2026.Models
+@using WorldCup2026.Services
+@inject IWorldCupService WorldCupService
+
+<PageTitle>金靴预测 - 2026 FIFA 世界杯</PageTitle>
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-3">⚽ 金靴奖预测榜</h2>
+    <p class="text-muted">本届世界杯顶级射手预测，共 14 位热门候选人</p>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light py-3">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span class="fw-semibold">📊 排序方式</span>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="/scorers?sort=predicted" class="btn btn-sm @(sortBy == "predicted" ? "btn-primary" : "btn-outline-primary")">🎯 预测进球</a>
+                <a href="/scorers?sort=worldcup" class="btn btn-sm @(sortBy == "worldcup" ? "btn-primary" : "btn-outline-primary")">🏆 世界杯历史进球</a>
+                <a href="/scorers?sort=international" class="btn btn-sm @(sortBy == "international" ? "btn-primary" : "btn-outline-primary")">🇫🇷 国家队进球</a>
+                <a href="/scorers?sort=value" class="btn btn-sm @(sortBy == "value" ? "btn-primary" : "btn-outline-primary")">💎 身价</a>
+                <a href="/scorers?sort=age" class="btn btn-sm @(sortBy == "age" ? "btn-primary" : "btn-outline-primary")">🎂 年龄（年轻→年长）</a>
+                <a href="/scorers?sort=age_desc" class="btn btn-sm @(sortBy == "age_desc" ? "btn-primary" : "btn-outline-primary")">🎂 年龄（年长→年轻）</a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="font-size:0.95rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width:60px" class="text-center">#</th>
+                        <th>球员</th>
+                        <th style="width:90px" class="text-center">位置</th>
+                        <th style="width:80px" class="text-center">🇫🇷 国家队</th>
+                        <th style="width:80px" class="text-center">年龄</th>
+                        <th>所属俱乐部</th>
+                        <th style="width:100px" class="text-center">国家队进球</th>
+                        <th style="width:100px" class="text-center">世界杯进球</th>
+                        <th style="width:110px" class="text-center fw-bold text-danger">🎯 预测进球</th>
+                        <th style="width:100px" class="text-center">💎 身价 (M)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var p in sortedPlayers)
+                    {
+                        var index = sortedPlayers.IndexOf(p) + 1;
+                        var medal = index <= 3;
+                        <tr class="@(medal ? "bg-warning bg-opacity-5 fw-bold" : "")">
+                            <td class="text-center">
+                                @if (index == 1) { <span class="text-warning">🥇</span> }
+                                else if (index == 2) { <span class="text-secondary">🥈</span> }
+                                else if (index == 3) { <span class="text-danger">🥉</span> }
+                                else { <span class="text-muted">@index</span> }
+                            </td>
+                            <td>
+                                <span class="fw-semibold fs-6">@p.Name</span>
+                            </td>
+                            <td class="text-center">
+                                <span class="badge @(p.Position == "前锋" || p.Position == "中锋" ? "bg-danger text-white" : p.Position == "边锋" || p.Position == "前腰/边锋" ? "bg-warning text-dark" : p.Position == "中场" ? "bg-primary text-white" : "bg-info text-white")">
+                                    @p.Position
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <span style="font-size:1.3rem;">@p.NationalFlag</span>
+                                <div><small class="text-secondary">@p.NationalTeam</small></div>
+                            </td>
+                            <td class="text-center @(p.Age >= 35 ? "text-secondary fw-bold" : p.Age <= 25 ? "text-success fw-bold" : "")">
+                                @p.Age
+                            </td>
+                            <td class="text-muted">@p.Club</td>
+                            <td class="text-center fw-semibold @(p.InternationalGoals >= 100 ? "text-primary" : "")">@p.InternationalGoals</td>
+                            <td class="text-center fw-semibold @(p.WorldCupGoals >= 8 ? "text-danger" : "")">@p.WorldCupGoals</td>
+                            <td class="text-center">
+                                <span class="badge bg-danger text-white fs-6">@p.PredictedGoals</span>
+                            </td>
+                            <td class="text-center @(p.MarketValueM >= 150 ? "text-success fw-bold" : "")">
+                                €@p.MarketValueM
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-5">
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="card-title fw-bold mb-3">🏆 世界杯历史进球 Top 3</h6>
+                @foreach (var p in sortedPlayers.OrderByDescending(x => x.WorldCupGoals).Take(3))
+                {
+                    <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                        <div>
+                            <span class="fw-semibold">@p.Name</span>
+                            <small class="text-muted ms-1">@p.NationalFlag</small>
+                        </div>
+                        <span class="badge bg-danger text-white">@p.WorldCupGoals 球</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="card-title fw-bold mb-3">💎 身价 Top 3</h6>
+                @foreach (var p in sortedPlayers.OrderByDescending(x => x.MarketValueM).Take(3))
+                {
+                    <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                        <div>
+                            <span class="fw-semibold">@p.Name</span>
+                            <small class="text-muted ms-1">@p.Age 岁</small>
+                        </div>
+                        <span class="text-success fw-bold">€@p.MarketValueM M</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-12 col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body">
+                <h6 class="card-title fw-bold mb-3">🎂 经验最丰富的老将</h6>
+                @foreach (var p in sortedPlayers.OrderByDescending(x => x.Age).Take(3))
+                {
+                    <div class="d-flex align-items-center justify-content-between py-2 border-bottom">
+                        <div>
+                            <span class="fw-semibold">@p.Name</span>
+                            <small class="text-muted ms-1">@p.NationalFlag</small>
+                        </div>
+                        <span class="badge bg-secondary">@p.Age 岁</span>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "sort")]
+    public string? SortQuery { get; set; }
+
+    private string sortBy = "predicted";
+    private List<Player> sortedPlayers = new();
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(SortQuery))
+        {
+            sortBy = SortQuery;
+        }
+
+        var all = WorldCupService.GetTopScorerCandidates();
+        sortedPlayers = sortBy switch
+        {
+            "worldcup" => all.OrderByDescending(p => p.WorldCupGoals).ToList(),
+            "international" => all.OrderByDescending(p => p.InternationalGoals).ToList(),
+            "value" => all.OrderByDescending(p => p.MarketValueM).ToList(),
+            "age" => all.OrderBy(p => p.Age).ToList(),
+            "age_desc" => all.OrderByDescending(p => p.Age).ToList(),
+            _ => all.OrderByDescending(p => p.PredictedGoals).ToList()
+        };
+    }
+}

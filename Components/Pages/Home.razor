@@ -1,0 +1,181 @@
+@page "/"
+@using WorldCup2026.Models
+@using WorldCup2026.Services
+@inject IWorldCupService WorldCupService
+
+<PageTitle>2026 FIFA 世界杯</PageTitle>
+
+<div class="hero-section mb-5 p-5 rounded-4 text-white" style="background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-4 fw-bold mb-3">🏆 2026 FIFA 世界杯</h1>
+                <p class="lead mb-4">美国 · 加拿大 · 墨西哥 联合主办</p>
+                <p class="mb-4 opacity-90">
+                    第 23 届国际足联世界杯，历史上首次由三个国家联合举办，
+                    16 支球队将在 16 座体育场展开为期 39 天的激烈角逐！
+                </p>
+                <div class="d-flex gap-3 flex-wrap">
+                    <span class="badge bg-light text-dark fs-6 px-4 py-2">📅 2026.06.11 - 07.19</span>
+                    <span class="badge bg-primary fs-6 px-4 py-2">🌍 3 个主办国</span>
+                    <span class="badge bg-success fs-6 px-4 py-2">🏟️ 16 座球场</span>
+                </div>
+            </div>
+            <div class="col-md-4 text-center d-none d-md-block">
+                <div class="display-1 fw-bold" style="font-size: 8rem;">⚽</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 text-center">
+            <div class="card-body py-4">
+                <div class="display-4 mb-2">🏟️</div>
+                <h5 class="fw-bold">80 场</h5>
+                <p class="text-muted mb-0">精彩比赛</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 text-center">
+            <div class="card-body py-4">
+                <div class="display-4 mb-2">🌐</div>
+                <h5 class="fw-bold">16 支</h5>
+                <p class="text-muted mb-0">参赛球队</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 text-center">
+            <div class="card-body py-4">
+                <div class="display-4 mb-2">🏅</div>
+                <h5 class="fw-bold">4 个</h5>
+                <p class="text-muted mb-0">比赛小组</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100 text-center">
+            <div class="card-body py-4">
+                <div class="display-4 mb-2">🎯</div>
+                <h5 class="fw-bold">1 座</h5>
+                <p class="text-muted mb-0">大力神杯</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold mb-0">🔥 最新比赛</h3>
+            <a href="matches" class="btn btn-outline-primary btn-sm">查看全部 →</a>
+        </div>
+        <div class="space-y-3">
+            @foreach (var match in WorldCupService.GetMatches().Take(5))
+            {
+                <div class="card border-0 shadow-sm mb-3">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge @(match.IsFinished ? "bg-secondary" : "bg-warning text-dark")">@match.Status</span>
+                            <small class="text-muted">@match.MatchDate.ToString("MM月dd日 HH:mm")</small>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2 flex-grow-1">
+                                <span style="font-size: 1.8rem;">@match.HomeTeam.FlagUrl</span>
+                                <span class="fw-semibold">@match.HomeTeam.Name</span>
+                            </div>
+                            <div class="px-4 text-center">
+                                @if (match.IsFinished)
+                                {
+                                    <span class="fs-3 fw-bold">@match.HomeScore - @match.AwayScore</span>
+                                }
+                                else
+                                {
+                                    <span class="fs-5 text-muted">VS</span>
+                                }
+                            </div>
+                            <div class="d-flex align-items-center gap-2 flex-grow-1 justify-content-end">
+                                <span class="fw-semibold">@match.AwayTeam.Name</span>
+                                <span style="font-size: 1.8rem;">@match.AwayTeam.FlagUrl</span>
+                            </div>
+                        </div>
+                        <div class="mt-2 text-center">
+                            <small class="text-muted">📍 @match.Venue</small>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold mb-0">📊 A 组积分</h3>
+            <a href="teams" class="btn btn-outline-primary btn-sm">全部积分 →</a>
+        </div>
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-0">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3">#</th>
+                            <th>球队</th>
+                            <th class="text-center">赛</th>
+                            <th class="text-center">分</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var standings = WorldCupService.GetStandings();
+                            if (standings.ContainsKey("A"))
+                            {
+                                var rank = 1;
+                                foreach (var team in standings["A"])
+                                {
+                                    <tr>
+                                        <td class="ps-3 fw-semibold @(rank <= 2 ? "text-success" : "")">@rank</td>
+                                        <td>
+                                            <span class="me-1">@team.FlagUrl</span>@team.Name
+                                        </td>
+                                        <td class="text-center">@team.Played</td>
+                                        <td class="text-center fw-bold">@team.Points</td>
+                                    </tr>
+                                    rank++;
+                                }
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold mb-0">📰 热点新闻</h3>
+        <a href="news" class="btn btn-outline-primary btn-sm">更多新闻 →</a>
+    </div>
+    <div class="row g-4">
+        @foreach (var news in WorldCupService.GetNews().Take(3))
+        {
+            <div class="col-md-4">
+                <div class="card border-0 shadow-sm h-100">
+                    @if (!string.IsNullOrWhiteSpace(news.ImageUrl))
+                    {
+                        <img src="@news.ImageUrl" class="card-img-top" alt="@news.Title" style="height: 200px; object-fit: cover;">
+                    }
+                    <div class="card-body">
+                        <span class="badge bg-primary mb-2">@news.Source</span>
+                        <h5 class="card-title fw-bold mb-2">@news.Title</h5>
+                        <p class="card-text text-muted mb-3">@news.Summary</p>
+                        <small class="text-muted">📅 @news.PublishDate.ToString("yyyy年MM月dd日")</small>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

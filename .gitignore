@@ -1,0 +1,79 @@
+# =========================
+# ASP.NET / .NET Core
+# =========================
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Pp]ublish/
+*.user
+*.suo
+*.cache
+*.lock.json
+*.pfx
+*.key
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.csproj.user
+*.sln.docstates
+*.VC.db
+*.opendb
+
+# VS Code
+.vscode/*
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+
+# NuGet
+*.nupkg
+*.snupkg
+packages/
+build/
+
+# .NET user secrets (may contain DB conn strings, keys)
+# Keep them OUT of public repos — NEVER commit these!
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+secrets.json
+secrets.xml
+
+# Test results
+TestResults/
+*.trx
+*.coverage
+
+# Blazor / static web assets build cache
+*.dswa.cache.json
+*.editorconfig
+bin.obj/
+
+# OS junk
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+System Volume Information
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Node modules (if later added for frontend tooling)
+node_modules/
+bower_components/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor temp files
+*~
+*.swp
+*.swo
+*.bak
+*.tmp
+*.log

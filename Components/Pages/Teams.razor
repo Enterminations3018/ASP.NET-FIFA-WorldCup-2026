@@ -1,0 +1,139 @@
+@page "/teams"
+@using WorldCup2026.Models
+@using WorldCup2026.Services
+@inject IWorldCupService WorldCupService
+@inject NavigationManager NavigationManager
+
+<PageTitle>球队积分 - 2026 FIFA 世界杯</PageTitle>
+
+<div class="mb-4">
+    <h2 class="fw-bold mb-3">🏅 球队与积分榜</h2>
+    <p class="text-muted">查看所有参赛球队信息和各组积分排名</p>
+</div>
+
+<div class="d-flex gap-2 mb-4 flex-wrap">
+    <a href="/teams?view=standings"
+       class="btn @(viewMode == "standings" ? "btn-primary" : "btn-outline-primary")">📊 积分榜</a>
+    <a href="/teams?view=teams"
+       class="btn @(viewMode == "teams" ? "btn-primary" : "btn-outline-primary")">🌐 球队列表</a>
+</div>
+
+@if (viewMode == "standings")
+{
+    var standings = WorldCupService.GetStandings();
+    <div class="row g-4">
+        @foreach (var group in standings.OrderBy(g => g.Key))
+        {
+            <div class="col-lg-6">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-header bg-transparent border-bottom-0 pt-4 pb-2">
+                        <h4 class="fw-bold mb-0">
+                            <span class="badge bg-primary me-2 fs-6">@group.Key 组</span>
+                            小组积分榜
+                        </h4>
+                    </div>
+                    <div class="card-body pt-2">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead>
+                                    <tr class="table-light">
+                                        <th class="text-center" style="width: 50px;">#</th>
+                                        <th>球队</th>
+                                        <th class="text-center" style="width: 50px;">赛</th>
+                                        <th class="text-center" style="width: 50px;">胜</th>
+                                        <th class="text-center" style="width: 50px;">平</th>
+                                        <th class="text-center" style="width: 50px;">负</th>
+                                        <th class="text-center" style="width: 80px;">得失球</th>
+                                        <th class="text-center" style="width: 60px;">净胜</th>
+                                        <th class="text-center fw-bold" style="width: 60px;">积分</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @{
+                                        var rank = 1;
+                                        foreach (var team in group.Value)
+                                        {
+                                            var qualifyClass = rank <= 2 ? "table-success" : "";
+                                            <tr class="@qualifyClass">
+                                                <td class="text-center">
+                                                    <span class="fw-bold @(rank <= 2 ? "text-success" : "")">@rank</span>
+                                                </td>
+                                                <td>
+                                                    <span class="fs-4 me-2">@team.FlagUrl</span>
+                                                    <span class="fw-semibold">@team.Name</span>
+                                                </td>
+                                                <td class="text-center">@team.Played</td>
+                                                <td class="text-center text-success">@team.Won</td>
+                                                <td class="text-center text-warning">@team.Drawn</td>
+                                                <td class="text-center text-danger">@team.Lost</td>
+                                                <td class="text-center">
+                                                    @team.GoalsFor : @team.GoalsAgainst
+                                                </td>
+                                                <td class="text-center @(team.GoalDifference > 0 ? "text-success" : team.GoalDifference < 0 ? "text-danger" : "")">
+                                                    @(team.GoalDifference > 0 ? "+" : "")@team.GoalDifference
+                                                </td>
+                                                <td class="text-center fw-bold fs-5">@team.Points</td>
+                                            </tr>
+                                            rank++;
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-2 small text-muted">
+                            <span class="badge bg-success me-1">晋级</span> 前两名晋级淘汰赛
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    var teamsByGroup = WorldCupService.GetTeams().GroupBy(t => t.Group).OrderBy(g => g.Key);
+    <div>
+        @foreach (var group in teamsByGroup)
+        {
+            <div class="mb-4">
+                <h4 class="fw-bold mb-3 border-start border-4 border-primary ps-3">
+                    <span class="badge bg-primary me-2 fs-6">@group.Key 组</span>
+                    参赛球队
+                </h4>
+                <div class="row g-3">
+                    @foreach (var team in group)
+                    {
+                        <div class="col-md-3 col-sm-6">
+                            <div class="card border-0 shadow-sm h-100 text-center">
+                                <div class="card-body py-4">
+                                    <div style="font-size: 4rem;" class="mb-2">@team.FlagUrl</div>
+                                    <h5 class="fw-bold mb-1">@team.Name</h5>
+                                    <p class="text-muted small mb-0">@team.Country</p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, SupplyParameterFromQuery(Name = "view")]
+    public string? ViewQuery { get; set; }
+
+    private string viewMode = "standings";
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(ViewQuery))
+        {
+            viewMode = ViewQuery;
+        }
+        else
+        {
+            viewMode = "standings";
+        }
+    }
+}
