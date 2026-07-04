@@ -184,6 +184,4 @@ ASP.NET-FIFA-WorldCup-2026/
 
 ---
 
-<div align="center">
-  Made with ⚽ + ❤️ by <a href="https://github.com/Enterminations3018">Enterminations3018</a>
-</div>
+<p align="center">Made with ⚽ + ❤️ by <a href="https://github.com/Enterminations3018">Enterminations3018</a></p>
