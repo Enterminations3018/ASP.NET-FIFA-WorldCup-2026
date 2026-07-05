@@ -14,6 +14,11 @@ concurrency:
   group: "pages"
   cancel-in-progress: true
 
+env:
+  DOTNET_VERSION: "10.0.203"
+  APP_URL: "http://localhost:5250"
+  PAGES_BASE: "/ASP.NET-FIFA-WorldCup-2026/"
+
 jobs:
   build-and-deploy:
     environment:
@@ -24,21 +29,121 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET 10
+      - name: Setup .NET SDK (exact version from global.json)
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: ${{ env.DOTNET_VERSION }}
 
-      - name: Publish app
-        run: dotnet publish WorldCup2026.csproj -c Release -o ./publish_out
+      - name: Restore + Publish app
+        run: |
+          dotnet restore WorldCup2026.csproj
+          dotnet publish WorldCup2026.csproj -c Release -o ./publish_out --no-restore
+
+      - name: Start app in background for static prerendering (SSG)
+        run: |
+          export ASPNETCORE_URLS="${{ env.APP_URL }}"
+          export ASPNETCORE_ENVIRONMENT="Production"
+          nohup dotnet ./publish_out/WorldCup2026.dll > /tmp/app.log 2>&1 &
+          echo $! > /tmp/app.pid
+          echo "   APP PID=$(cat /tmp/app.pid)"
+          for i in $(seq 1 60); do
+            if curl -sfSL "${{ env.APP_URL }}/" --max-time 5 -o /dev/null; then
+              echo "✅ App is up after ${i}s"
+              break
+            fi
+            echo "   waiting $i/60..."
+            sleep 1
+          done
+          curl -sfSL "${{ env.APP_URL }}/" --max-time 10 -o /dev/null || (echo "❌ App failed to start"; tail -n 50 /tmp/app.log; exit 1)
+
+      - name: Prerender ALL routes into static HTML for GitHub Pages
+        run: |
+          SITE="_site"
+          mkdir -p "$SITE"
+          PAGES=(
+            "/"
+            "/matches"
+            "/matches?status=finished"
+            "/matches?status=running"
+            "/matches?status=upcoming"
+            "/teams"
+            "/teams?view=table"
+            "/teams?view=list"
+            "/news"
+            "/rankings"
+            "/rankings?sort=total"
+            "/rankings?sort=attack"
+            "/rankings?sort=midfield"
+            "/rankings?sort=defense"
+            "/rankings?sort=gk"
+            "/scorers"
+            "/topscorers"
+            "/stadiums"
+          )
+          for path in "${PAGES[@]}"; do
+            rel="${path#/}"
+            if [ -z "$rel" ]; then
+              outdir="$SITE"
+              outfile="$SITE/index.html"
+            else
+              clean="${rel%%\?*}"
+              qs="${rel#*\?}"
+              if [ "$qs" = "$rel" ]; then
+                outdir="$SITE/$clean"
+                outfile="$SITE/$clean/index.html"
+              else
+                safenamesort=$(echo "$qs" | tr '&=' '__')
+                outdir="$SITE/$clean/_$safenamesort"
+                outfile="$SITE/$clean/_$safenamesort/index.html"
+              fi
+            fi
+            mkdir -p "$outdir"
+            code=$(curl -sSL -w "%{http_code}" -o "$outfile" "${{ env.APP_URL }}${path}" --max-time 30)
+            size=$(stat -c%s "$outfile" 2>/dev/null || echo 0)
+            echo "   [$code] ${path}  →  ${outfile#$SITE/} ($size bytes)"
+            # Rewrite <base href> so assets resolve on Pages sub-path
+            if command -v perl >/dev/null 2>&1; then
+              perl -i -pe 's|<base href="/" */?>|<base href="${{ env.PAGES_BASE }}">|g' "$outfile" 2>/dev/null
+            else
+              sed -i "s|<base href=\"/\" */?>|<base href=\"${{ env.PAGES_BASE }}\">|g" "$outfile" 2>/dev/null || true
+            fi
+          done
+
+      - name: Copy static assets (wwwroot) + .nojekyll + 404 fallback
+        run: |
+          SITE="_site"
+          if [ -d "./publish_out/wwwroot" ]; then
+            cp -r ./publish_out/wwwroot/. "$SITE/"
+            echo "   Copied wwwroot assets"
+          fi
+          touch "$SITE/.nojekyll"
+          cp "$SITE/index.html" "$SITE/404.html"
+          echo "   .nojekyll + 404.html fallback created"
+          echo ""
+          echo "--- Final _site/ tree overview ---"
+          find "$SITE" -maxdepth 3 -type d | head -n 40
+          echo ""
+          echo "File count: $(find "$SITE" -type f | wc -l)"
+          echo "Total size: $(du -sh "$SITE" | cut -f1)"
+
+      - name: Stop prerendering app
+        if: always()
+        run: |
+          if [ -f /tmp/app.pid ]; then
+            PID=$(cat /tmp/app.pid)
+            kill $PID 2>/dev/null || true
+            sleep 1
+            kill -9 $PID 2>/dev/null || true
+            echo "   Stopped prerender app PID=$PID"
+          fi
 
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload artifact (static wwwroot fallback)
+      - name: Upload prerendered Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./publish_out/wwwroot
+          path: ./_site
 
       - name: Deploy to GitHub Pages
         id: deployment
