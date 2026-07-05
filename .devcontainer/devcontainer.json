@@ -1,0 +1,28 @@
+{
+  "name": "2026 FIFA World Cup Blazor",
+  "image": "mcr.microsoft.com/dotnet/sdk:10.0",
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "forwardPorts": [5250, 7180],
+  "portsAttributes": {
+    "5250": {
+      "label": "WorldCup 2026 (HTTP)",
+      "visibility": "public"
+    },
+    "7180": {
+      "label": "WorldCup 2026 (HTTPS)",
+      "visibility": "public"
+    }
+  },
+  "postCreateCommand": "dotnet restore WorldCup2026.csproj",
+  "postStartCommand": "dotnet run --project WorldCup2026.csproj --launch-profile http",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csdevkit",
+        "ms-dotnettools.csharp"
+      ]
+    }
+  }
+}
