@@ -77,3 +77,8 @@ pnpm-debug.log*
 *.bak
 *.tmp
 *.log
+
+# Publish backup artifacts
+publish-backup/
+publish-bak/
+

@@ -5,6 +5,8 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <DefaultItemExcludes>$(DefaultItemExcludes);publish\**;publish-bak\**;publish-backup\**</DefaultItemExcludes>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**\*.razor.js;obj\**\*.razor.js</DefaultItemExcludes>
   </PropertyGroup>
 
 </Project>
