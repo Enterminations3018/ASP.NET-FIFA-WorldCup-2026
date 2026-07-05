@@ -6,9 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: "pages"
@@ -21,9 +19,6 @@ env:
 
 jobs:
   build-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -36,30 +31,57 @@ jobs:
 
       - name: Restore + Publish app
         run: |
+          echo "--- global.json check ---"
+          cat global.json
+          echo "--- SDK used ---"
+          dotnet --list-sdks
+          dotnet --version
           dotnet restore WorldCup2026.csproj
           dotnet publish WorldCup2026.csproj -c Release -o ./publish_out --no-restore
+          echo "--- publish_out/wwwroot contents ---"
+          ls -R ./publish_out/wwwroot | head -n 40
 
       - name: Start app in background for static prerendering (SSG)
+        id: startapp
         run: |
           export ASPNETCORE_URLS="${{ env.APP_URL }}"
           export ASPNETCORE_ENVIRONMENT="Production"
-          nohup dotnet ./publish_out/WorldCup2026.dll > /tmp/app.log 2>&1 &
-          echo $! > /tmp/app.pid
-          echo "   APP PID=$(cat /tmp/app.pid)"
-          for i in $(seq 1 60); do
-            if curl -sfSL "${{ env.APP_URL }}/" --max-time 5 -o /dev/null; then
-              echo "✅ App is up after ${i}s"
-              break
-            fi
-            echo "   waiting $i/60..."
+          export DOTNET_ENVIRONMENT="Production"
+          rm -f /tmp/app.log /tmp/app.pid
+          (cd ./publish_out && nohup dotnet WorldCup2026.dll > /tmp/app.log 2>&1 &)
+          sleep 3
+          echo "   app.log tail after 3s:"
+          tail -n 20 /tmp/app.log || true
+          PID=$(pgrep -f "WorldCup2026.dll" | head -n 1 || true)
+          echo "   PID=$PID"
+          [ -n "$PID" ] && echo $PID > /tmp/app.pid || true
+          for i in $(seq 1 80); do
             sleep 1
+            if curl -sfSL "${{ env.APP_URL }}/" --max-time 3 -o /tmp/probe.html; then
+              SIZE=$(stat -c%s /tmp/probe.html 2>/dev/null || echo 0)
+              echo "✅ App is up after ${i}s, home page $SIZE bytes"
+              head -c 300 /tmp/probe.html
+              echo ""
+              echo "PID=$(pgrep -f 'WorldCup2026.dll' | head -n 1)" > /tmp/app.pid
+              exit 0
+            fi
+            # show signs of life every 10 loops
+            if [ $(( i % 15 )) -eq 0 ]; then
+              echo "   still waiting... attempt $i, last app.log:"
+              tail -n 15 /tmp/app.log
+            fi
           done
-          curl -sfSL "${{ env.APP_URL }}/" --max-time 10 -o /dev/null || (echo "❌ App failed to start"; tail -n 50 /tmp/app.log; exit 1)
+          echo "❌ App never responded"
+          echo "===== FULL app.log ====="
+          cat /tmp/app.log || true
+          exit 1
 
-      - name: Prerender ALL routes into static HTML for GitHub Pages
+      - name: Prerender ALL routes into static HTML + verify
         run: |
           SITE="_site"
+          rm -rf "$SITE"
           mkdir -p "$SITE"
+          # Routes to capture (covers all 7 modules + all Query String states)
           PAGES=(
             "/"
             "/matches"
@@ -80,71 +102,90 @@ jobs:
             "/topscorers"
             "/stadiums"
           )
+          OK=0
+          FAIL=0
           for path in "${PAGES[@]}"; do
             rel="${path#/}"
             if [ -z "$rel" ]; then
-              outdir="$SITE"
-              outfile="$SITE/index.html"
+              outdir="$SITE"; outfile="$SITE/index.html"
             else
-              clean="${rel%%\?*}"
-              qs="${rel#*\?}"
+              clean="${rel%%\?*}"; qs="${rel#*\?}"
               if [ "$qs" = "$rel" ]; then
-                outdir="$SITE/$clean"
-                outfile="$SITE/$clean/index.html"
+                outdir="$SITE/$clean"; outfile="$SITE/$clean/index.html"
               else
                 safenamesort=$(echo "$qs" | tr '&=' '__')
-                outdir="$SITE/$clean/_$safenamesort"
-                outfile="$SITE/$clean/_$safenamesort/index.html"
+                outdir="$SITE/$clean/_$safenamesort"; outfile="$SITE/$clean/_$safenamesort/index.html"
               fi
             fi
             mkdir -p "$outdir"
-            code=$(curl -sSL -w "%{http_code}" -o "$outfile" "${{ env.APP_URL }}${path}" --max-time 30)
+            code=$(curl -sSL -w "%{http_code}" -o "$outfile" "${{ env.APP_URL }}${path}" --max-time 45)
             size=$(stat -c%s "$outfile" 2>/dev/null || echo 0)
-            echo "   [$code] ${path}  →  ${outfile#$SITE/} ($size bytes)"
-            # Rewrite <base href> so assets resolve on Pages sub-path
-            if command -v perl >/dev/null 2>&1; then
-              perl -i -pe 's|<base href="/" */?>|<base href="${{ env.PAGES_BASE }}">|g' "$outfile" 2>/dev/null
+            echo "   [$code] $(printf '%-30s' "$path")  →  $(printf '%-28s' "${outfile#$SITE/}")  $size bytes"
+            if [ "$code" = "200" ] && [ "$size" -gt 5000 ]; then
+              OK=$((OK+1))
+              # Rewrite <base href="/" /> → <base href="/repo-name/"> for Pages sub-path
+              perl -i -pe 's|<base href="/" */?>|<base href="${{ env.PAGES_BASE }}">|gi' "$outfile"
+              # Also rewrite any absolute href="/xxx" that are supposed to be internal nav, 
+              # make them relative to Pages base.  Be careful not to touch http(s): absolute URLs.
+              perl -i -pe 's|(href|src)="(?!(?:https?:|data:|mailto:))/([^"]*)"|$1="${{ env.PAGES_BASE }}$2"|g' "$outfile"
             else
-              sed -i "s|<base href=\"/\" */?>|<base href=\"${{ env.PAGES_BASE }}\">|g" "$outfile" 2>/dev/null || true
+              FAIL=$((FAIL+1))
+              echo "      ❌ BAD (expect 200 + >5000B) — dumping head:"
+              head -c 400 "$outfile" | sed 's/</\n</g' | head -n 15 || true
             fi
           done
+          echo ""
+          echo "✅ OK=$OK / ❌ FAIL=$FAIL"
+          echo "===== _site summary ====="
+          find "$SITE" -name '*.html' -printf '%10s %p\n' | sort -rn | head -n 30
+          COUNT=$(find "$SITE" -name '*.html' | wc -l)
+          TOTSIZE=$(du -sb "$SITE" | cut -f1)
+          echo ""
+          echo "Total HTML files: $COUNT  |  Total _site size: $TOTSIZE bytes"
+          [ "$FAIL" -eq 0 ] && [ "$COUNT" -ge 10 ] || { echo "❌ Prerender validation failed (FAIL=$FAIL COUNT=$COUNT)"; exit 1; }
 
-      - name: Copy static assets (wwwroot) + .nojekyll + 404 fallback
+      - name: Copy wwwroot static assets + create .nojekyll + 404.html
         run: |
           SITE="_site"
           if [ -d "./publish_out/wwwroot" ]; then
-            cp -r ./publish_out/wwwroot/. "$SITE/"
-            echo "   Copied wwwroot assets"
+            # -n so prerendered HTML (newer) is never overwritten by any stale index.html in wwwroot
+            cp -rn ./publish_out/wwwroot/. "$SITE/" 2>/dev/null || cp -r ./publish_out/wwwroot/. "$SITE/"
+            echo "   Copied wwwroot assets (noclobber)"
           fi
           touch "$SITE/.nojekyll"
-          cp "$SITE/index.html" "$SITE/404.html"
-          echo "   .nojekyll + 404.html fallback created"
-          echo ""
-          echo "--- Final _site/ tree overview ---"
-          find "$SITE" -maxdepth 3 -type d | head -n 40
-          echo ""
-          echo "File count: $(find "$SITE" -type f | wc -l)"
-          echo "Total size: $(du -sh "$SITE" | cut -f1)"
+          # 404 fallback: a small HTML meta-redirect to home (or copies home if size OK)
+          HOMESIZE=$(stat -c%s "$SITE/index.html" 2>/dev/null || echo 0)
+          if [ "$HOMESIZE" -gt 5000 ]; then
+            cp "$SITE/index.html" "$SITE/404.html"
+            echo "   404.html = copy of home ($HOMESIZE bytes)"
+          else
+            cat > "$SITE/404.html" <<'EOHTML'
+          <!doctype html><html><head><meta charset="utf-8">
+          <meta http-equiv="refresh" content="0; url=/">
+          <title>Redirecting…</title></head>
+          <body><a href="/">Click here if not redirected</a></body></html>
+          EOHTML
+            echo "   404.html = meta-redirect fallback"
+          fi
+          ls -la "$SITE" | head -n 20
 
       - name: Stop prerendering app
         if: always()
         run: |
           if [ -f /tmp/app.pid ]; then
-            PID=$(cat /tmp/app.pid)
-            kill $PID 2>/dev/null || true
+            PID=$(cat /tmp/app.pid || true)
+            [ -n "$PID" ] && kill $PID 2>/dev/null
             sleep 1
-            kill -9 $PID 2>/dev/null || true
-            echo "   Stopped prerender app PID=$PID"
+            pkill -9 -f "WorldCup2026.dll" 2>/dev/null || true
+            echo "   Stopped prerender app"
           fi
 
-      - name: Setup GitHub Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload prerendered Pages artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy prerendered site to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: ./_site
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./_site
+          publish_branch: gh-pages
+          force_orphan: true
+          user_name: "github-actions[bot]"
+          user_email: "41898282+github-actions[bot]@users.noreply.github.com"
